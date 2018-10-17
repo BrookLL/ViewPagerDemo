@@ -23,7 +23,7 @@ public class InfiniteViewPager extends ViewPager {
     private ViewHolderCreator viewHolderCreator;
     private Map<Integer, Object> dataMap = new HashMap<>();
     private OnNeedAddDataCallback onNeedAddDataCallback;
-
+    private OnCurrentPageChangeListener onCurrentPageChangeListener;
 
     public InfiniteViewPager(@NonNull Context context) {
         this(context, null);
@@ -32,8 +32,33 @@ public class InfiniteViewPager extends ViewPager {
     public InfiniteViewPager(@NonNull Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
         setOffscreenPageLimit(MAX_VIEW_LIMIT);
+        addOnPageChangeListener(onPageChangeListener);
     }
 
+    private OnPageChangeListener onPageChangeListener = new OnPageChangeListener() {
+        @Override
+        public void onPageScrolled(int i, float v, int i1) {
+
+        }
+
+        @Override
+        public void onPageSelected(int i) {
+            if (onCurrentPageChangeListener != null) {
+                Object currentData = getCurrentItemViewHolder().data;
+                onCurrentPageChangeListener.onCurrentPageChange(currentData);
+            }
+        }
+
+        @Override
+        public void onPageScrollStateChanged(int i) {
+
+        }
+    };
+
+    /**
+     * 设置新增数据的回调
+     * @param onNeedAddDataCallback
+     */
     public void setOnNeedAddDataCallback(OnNeedAddDataCallback onNeedAddDataCallback) {
         this.onNeedAddDataCallback = onNeedAddDataCallback;
     }
@@ -195,6 +220,13 @@ public class InfiniteViewPager extends ViewPager {
         T addLast(int position, T t);
     }
 
+    /**
+     * 翻页后当前数据在列表中的位置回调
+     */
+    public interface OnCurrentPageChangeListener {
+        void onCurrentPageChange(Object onject);
+    }
+
 
     /**
      * 设置基础数据和ViewHolderCreator
@@ -301,5 +333,19 @@ public class InfiniteViewPager extends ViewPager {
         }
         super.setCurrentItem(getCurrentItem() - 1);
     }
+    /**
+     * 设置当前页变化的监听
+     * @param onCurrentPageChangeListener
+     */
+    public void setOnCurrentPageChangeListener(OnCurrentPageChangeListener onCurrentPageChangeListener) {
+        this.onCurrentPageChangeListener = onCurrentPageChangeListener;
+    }
 
+    /**
+     * 获取数据Map
+     * @return
+     */
+    public Map<Integer, Object> getDataMap() {
+        return dataMap;
+    }
 }
