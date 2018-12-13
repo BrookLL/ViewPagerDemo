@@ -9,6 +9,7 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.RelativeLayout;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,13 +17,14 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-public class LoopViewPager extends ViewPager {
+public class LoopViewPager extends RelativeLayout {
     private static final String TAG = "LoopViewPager";
     private static final int MAX_VIEW_LIMIT = 2;
     private static final int MID_PAGES_INDEX = Integer.MAX_VALUE / 2;
     private OnCurrentPageChangeListener onCurrentPageChangeListener;
     private ViewHolderCreator viewHolderCreator;
     private List dataList = new ArrayList();
+    private ViewPager viewPager;
 
     public LoopViewPager(@NonNull Context context) {
         this(context, null);
@@ -30,11 +32,13 @@ public class LoopViewPager extends ViewPager {
 
     public LoopViewPager(@NonNull Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
-        setOffscreenPageLimit(MAX_VIEW_LIMIT);
-        addOnPageChangeListener(onPageChangeListener);
     }
 
-    private OnPageChangeListener onPageChangeListener = new OnPageChangeListener() {
+    public LoopViewPager(Context context, AttributeSet attrs, int defStyleAttr) {
+        super(context, attrs, defStyleAttr);
+    }
+
+    private ViewPager.OnPageChangeListener onPageChangeListener = new ViewPager.OnPageChangeListener() {
         @Override
         public void onPageScrolled(int i, float v, int i1) {
 
@@ -80,9 +84,11 @@ public class LoopViewPager extends ViewPager {
         @Override
         public void destroyItem(@NonNull ViewGroup container, int position, @NonNull Object object) {
             ViewHolder holder = viewHolderCreator.usedViewHolders.remove(position);
-            container.removeView(holder.view);
-            holder.setData(null);
-            viewHolderCreator.freeViewHolders.addLast(holder);
+            if (holder != null) {
+                container.removeView(holder.view);
+                holder.setData(null);
+                viewHolderCreator.freeViewHolders.addLast(holder);
+            }
         }
 
         /**
@@ -160,14 +166,23 @@ public class LoopViewPager extends ViewPager {
     /**
      * 设置基础数据和ViewHolderCreator
      *
-     * @param dataList 数据列表
+     * @param dataList          数据列表
      * @param viewHolderCreator
      */
     public void setData(List dataList, @NonNull ViewHolderCreator viewHolderCreator) {
+        this.dataList.clear();
         this.dataList.addAll(dataList);
         this.viewHolderCreator = viewHolderCreator;
-        setAdapter(new LoopPagerAdapter());
-        super.setCurrentItem(MID_PAGES_INDEX, false);
+        createViewPager();
+    }
+
+    private void createViewPager() {
+        viewPager = new ViewPager(getContext());
+        viewPager.setAdapter(new LoopPagerAdapter());
+        viewPager.setCurrentItem(MID_PAGES_INDEX,false);
+        viewPager.addOnPageChangeListener(onPageChangeListener);
+        removeAllViews();
+        addView(viewPager, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
     }
 
     /**
@@ -176,7 +191,10 @@ public class LoopViewPager extends ViewPager {
      * @return
      */
     public ViewHolder getCurrentItemViewHolder() {
-        return viewHolderCreator.usedViewHolders.get(getCurrentItem());
+        if (viewPager != null) {
+            return viewHolderCreator.usedViewHolders.get(viewPager.getCurrentItem());
+        }
+        return null;
     }
 
     /**
@@ -187,18 +205,6 @@ public class LoopViewPager extends ViewPager {
      */
     public ViewHolder getViewHolderOfPosition(int position) {
         return viewHolderCreator.usedViewHolders.get(position);
-    }
-
-    //原来跳转界面要阻断
-    @Override
-    public void setCurrentItem(int item) {
-//        super.setCurrentItem(item);
-    }
-
-    //原来跳转界面要阻断
-    @Override
-    public void setCurrentItem(int item, boolean smoothScroll) {
-//        super.setCurrentItem(item, smoothScroll);
     }
 
     /**
@@ -217,9 +223,12 @@ public class LoopViewPager extends ViewPager {
      * @param smoothScroll 是否带滚动动画
      */
     public void setCurrentItemOfData(Object data, boolean smoothScroll) {
+        if (viewPager == null) {
+            return;
+        }
         for (Integer key : viewHolderCreator.usedViewHolders.keySet()) {
             if (data.equals(viewHolderCreator.usedViewHolders.get(key).data)) {
-                super.setCurrentItem(key, smoothScroll);
+                viewPager.setCurrentItem(key, smoothScroll);
                 break;
             }
         }
@@ -229,26 +238,33 @@ public class LoopViewPager extends ViewPager {
      * 翻到下一页
      */
     public void nextPage() {
-        if (getCurrentItem() + 1 > Integer.MAX_VALUE) {
+        if (viewPager == null) {
+            return;
+        }
+        if (viewPager.getCurrentItem() + 1 > Integer.MAX_VALUE) {
             Log.e(TAG, "没有下一页了");
             return;
         }
-        super.setCurrentItem(getCurrentItem() + 1);
+        viewPager.setCurrentItem(viewPager.getCurrentItem() + 1);
     }
 
     /**
      * 翻到上一页
      */
     public void lastPage() {
-        if (getCurrentItem() <= 0) {
+        if (viewPager == null) {
+            return;
+        }
+        if (viewPager.getCurrentItem() <= 0) {
             Log.e(TAG, "没有上一页了");
             return;
         }
-        super.setCurrentItem(getCurrentItem() - 1);
+        viewPager.setCurrentItem(viewPager.getCurrentItem() - 1);
     }
 
     /**
      * 设置当前页变化的监听
+     *
      * @param onCurrentPageChangeListener
      */
     public void setOnCurrentPageChangeListener(OnCurrentPageChangeListener onCurrentPageChangeListener) {

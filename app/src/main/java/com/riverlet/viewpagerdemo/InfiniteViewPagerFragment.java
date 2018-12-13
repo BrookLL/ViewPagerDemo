@@ -54,7 +54,6 @@ public class InfiniteViewPagerFragment extends Fragment {
         view.findViewById(R.id.button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.d("InfiniteViewPager",viewpager.getDataList().toString());
                 viewpager.setCurrentItemOfData(0, false);
             }
         });

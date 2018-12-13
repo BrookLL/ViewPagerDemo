@@ -2,21 +2,20 @@ package com.riverlet.riverletviewpager;
 
 import android.content.Context;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.RelativeLayout;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-public class InfiniteViewPager extends ViewPager {
+public class InfiniteViewPager extends RelativeLayout {
     private static final String TAG = "InfiniteViewPager";
     private static final int MAX_VIEW_LIMIT = 2;
     private static final int MID_PAGES_INDEX = Integer.MAX_VALUE / 2;
@@ -24,18 +23,21 @@ public class InfiniteViewPager extends ViewPager {
     private Map<Integer, Object> dataMap = new HashMap<>();
     private OnNeedAddDataCallback onNeedAddDataCallback;
     private OnCurrentPageChangeListener onCurrentPageChangeListener;
+    private ViewPager viewPager;
 
     public InfiniteViewPager(@NonNull Context context) {
-        this(context, null);
+        super(context);
     }
 
-    public InfiniteViewPager(@NonNull Context context, @Nullable AttributeSet attrs) {
+    public InfiniteViewPager(Context context, AttributeSet attrs) {
         super(context, attrs);
-        setOffscreenPageLimit(MAX_VIEW_LIMIT);
-        addOnPageChangeListener(onPageChangeListener);
     }
 
-    private OnPageChangeListener onPageChangeListener = new OnPageChangeListener() {
+    public InfiniteViewPager(Context context, AttributeSet attrs, int defStyleAttr) {
+        super(context, attrs, defStyleAttr);
+    }
+
+    private ViewPager.OnPageChangeListener onPageChangeListener = new ViewPager.OnPageChangeListener() {
         @Override
         public void onPageScrolled(int i, float v, int i1) {
 
@@ -63,7 +65,7 @@ public class InfiniteViewPager extends ViewPager {
         this.onNeedAddDataCallback = onNeedAddDataCallback;
     }
 
-    private class LoopPagerAdapter extends PagerAdapter {
+    private class InfinitePagerAdapter extends PagerAdapter {
 
         @Override
         public void finishUpdate(@NonNull ViewGroup container) {
@@ -240,17 +242,26 @@ public class InfiniteViewPager extends ViewPager {
         for (int i = 0; i < dataList.size(); i++) {
             dataMap.put(MID_PAGES_INDEX + (i - dataList.size() / 2), dataList.get(i));
         }
-        setAdapter(new LoopPagerAdapter());
-        super.setCurrentItem(MID_PAGES_INDEX, false);
+        createViewPager();
     }
-
+    private void createViewPager() {
+        viewPager = new ViewPager(getContext());
+        viewPager.setAdapter(new InfinitePagerAdapter());
+        viewPager.setCurrentItem(MID_PAGES_INDEX,false);
+        viewPager.addOnPageChangeListener(onPageChangeListener);
+        removeAllViews();
+        addView(viewPager, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+    }
     /**
      * 获取当前显示Item的ViewHolder
      *
      * @return
      */
     public ViewHolder getCurrentItemViewHolder() {
-        return viewHolderCreator.usedViewHolders.get(getCurrentItem());
+        if (viewPager == null) {
+            return null;
+        }
+        return viewHolderCreator.usedViewHolders.get(viewPager.getCurrentItem());
     }
 
     /**
@@ -261,18 +272,6 @@ public class InfiniteViewPager extends ViewPager {
      */
     public ViewHolder getViewHolderOfPosition(int position) {
         return viewHolderCreator.usedViewHolders.get(position);
-    }
-
-    //原来跳转界面要阻断
-    @Override
-    public void setCurrentItem(int item) {
-//        super.setCurrentItem(item);
-    }
-
-    //原来跳转界面要阻断
-    @Override
-    public void setCurrentItem(int item, boolean smoothScroll) {
-//        super.setCurrentItem(item, smoothScroll);
     }
 
     /**
@@ -299,15 +298,18 @@ public class InfiniteViewPager extends ViewPager {
     }
 
     private void scrollToItem(final Integer position, final boolean smoothScroll) {
-        int currentPosition = getCurrentItem();
+        if (viewPager == null) {
+            return;
+        }
+        int currentPosition = viewPager.getCurrentItem();
         if (position > currentPosition) {
             while (++currentPosition <= position) {
-                super.setCurrentItem(currentPosition, smoothScroll);
+                viewPager.setCurrentItem(currentPosition, smoothScroll);
             }
 
         } else {
             while (--currentPosition >= position) {
-                super.setCurrentItem(currentPosition, smoothScroll);
+                viewPager.setCurrentItem(currentPosition, smoothScroll);
             }
         }
     }
@@ -316,22 +318,28 @@ public class InfiniteViewPager extends ViewPager {
      * 翻到下一页
      */
     public void nextPage() {
-        if (getCurrentItem() + 1 > Integer.MAX_VALUE) {
+        if (viewPager == null) {
+            return;
+        }
+        if (viewPager.getCurrentItem() + 1 > Integer.MAX_VALUE) {
             Log.e(TAG, "没有下一页了");
             return;
         }
-        super.setCurrentItem(getCurrentItem() + 1);
+        viewPager.setCurrentItem(viewPager.getCurrentItem() + 1);
     }
 
     /**
      * 翻到上一页
      */
     public void lastPage() {
-        if (getCurrentItem() <= 0) {
+        if (viewPager == null) {
+            return;
+        }
+        if (viewPager.getCurrentItem() <= 0) {
             Log.e(TAG, "没有上一页了");
             return;
         }
-        super.setCurrentItem(getCurrentItem() - 1);
+        viewPager.setCurrentItem(viewPager.getCurrentItem() - 1);
     }
     /**
      * 设置当前页变化的监听
